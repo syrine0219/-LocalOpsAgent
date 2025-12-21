@@ -21,12 +21,12 @@ def main():
         result = agent.process(user_input)
         
         if result["status"] == "success":
-            print(f"\n🤖 Agent:")
+            print(f"\n Agent:")
             print(result["response"].get("summary", "Pas de résumé"))
             if "data" in result["response"]:
                 print(f"\n[Debug] Intent: {result['intent']}")
         else:
-            print(f"❌ Erreur: {result.get('error', 'Unknown')}")
+            print(f" Erreur: {result.get('error', 'Unknown')}")
 
 if __name__ == "__main__":
     main()
