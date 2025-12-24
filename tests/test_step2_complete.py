@@ -1,6 +1,6 @@
 """
-Tests complets de la Semaine 2
-Jour 14 - Semaine 2
+Tests complets de step 2
+
 """
 
 import sys
@@ -12,7 +12,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-print("=== TESTS COMPLETS - SEMAINE 2 - LOCAL AI MODEL ===")
+print("=== TESTS COMPLETS - Step 2 - LOCAL AI MODEL ===")
 print("="*60)
 
 def test_divider(name):
@@ -192,13 +192,3 @@ for comp, ok in components.items():
 
 print("\n" + "="*60)
 
-if all_success:
-    print("FELICITATIONS! AI travail AVEC SUCCES!")
-    print("\nProchaines etapes:")
-    print("1. Commit: git add . && git commit -m 'Semaine 2: IA locale integree'")
-    print("2. Lance l'agent: python run_agent.py")
-    print("3. Teste differentes commandes")
-    print("4. Passe a la semaine 3!")
-else:
-    print("ATTENTION - Certains composants necessitent de l'attention")
-    print("   Verifie les erreurs ci-dessus et corrige-les")

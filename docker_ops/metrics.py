@@ -1,7 +1,6 @@
-# docker_ops/metrics.py
-import docker
-from typing import Dict, List  # ASSUREZ-VOUS QUE CETTE LIGNE EST PRÉSENTE
 
+import docker
+from typing import Dict, List  
 class ContainerMetrics:
     def __init__(self, docker_client):
         self.client = docker_client

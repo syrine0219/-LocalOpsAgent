@@ -1,4 +1,4 @@
-# docker_ops/anomaly.py - VERSION FINALE JOUR 18
+
 from typing import Dict, List, Optional
 import time
 import json
@@ -146,11 +146,11 @@ class AnomalyDetector:
         # Niveau d'urgence selon le type
         if anomaly['level'] == 'CRITICAL':
             alert['urgency'] = 'HIGH'
-            alert['notification'] = f"🚨 CRITICAL: {container_name} - {anomaly['message']}"
+            alert['notification'] = f" CRITICAL: {container_name} - {anomaly['message']}"
             alert['priority'] = 1
         else:
             alert['urgency'] = 'MEDIUM'
-            alert['notification'] = f"⚠️ WARNING: {container_name} - {anomaly['message']}"
+            alert['notification'] = f" WARNING: {container_name} - {anomaly['message']}"
             alert['priority'] = 2
         
         self.alerts.append(alert)

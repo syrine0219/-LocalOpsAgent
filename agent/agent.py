@@ -1,6 +1,6 @@
 """
 Agent LocalOpsAI avec logique de fallback
-Jour 12 - Semaine 2
+
 """
 
 import sys

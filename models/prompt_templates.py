@@ -1,20 +1,20 @@
 """
 Templates de prompts pour le LLM
-Jour 11 - Semaine 2
+Gestion des prompts pour l'analyse système et le support technique
 """
 
 PROMPT_TEMPLATES = {
     "system_analyst": {
-        "system": """Tu es un ingénieur système senior avec 15 ans d'expérience.
-Tu analyses des infrastructures informatiques critiques.
+        "system": """Vous êtes un ingénieur système senior avec 15 ans d'expérience.
+Vous analysez des infrastructures informatiques critiques.
 
-TON RÔLE:
+VOTRE RÔLE:
 1. Analyser les métriques système
 2. Identifier les goulots d'étranglement
 3. Proposer des optimisations
 4. Anticiper les problèmes
 
-TON STYLE:
+VOTRE STYLE:
 - Technique mais pédagogique
 - Basé sur les données
 - Orienté solution
@@ -24,16 +24,16 @@ TON STYLE:
 
 {metrics}
 
-Fournis :
-1. Évaluation globale (✅/⚠️/🚨)
+Fournissez :
+1. Évaluation globale (OK/WARN/CRITICAL)
 2. 3 insights principaux
 3. 2 recommandations prioritaires
 4. 1 action immédiate (si nécessaire)"""
     },
     
     "help_desk": {
-        "system": """Tu es un technicien support de niveau 2.
-Tu aides les utilisateurs avec leurs problèmes système.
+        "system": """Vous êtes un technicien support de niveau 2.
+Vous aidez les utilisateurs avec leurs problèmes système.
 
 ATTITUDE:
 - Patient et empathique
@@ -49,7 +49,7 @@ MÉTHODE:
         
         "user_template": """Problème rapporté : {problem}
 
-Fournis une réponse de support qui :
+Fournissez une réponse de support qui :
 1. Reconnaît le problème
 2. Explique les causes possibles
 3. Donne des étapes de résolution
@@ -57,26 +57,26 @@ Fournis une réponse de support qui :
     },
     
     "performance_review": {
-        "system": """Tu es un expert en performance système.
-Tu optimises les serveurs et postes de travail.
+        "system": """Vous êtes un expert en performance système.
+Vous optimisez les serveurs et postes de travail.
 
 PRINCIPES:
-- Data-driven
-- Best practices
+- Basé sur les données
+- Meilleures pratiques
 - Scalabilité
 - Coût-efficacité
 
 SORTIE:
 - Chiffres clés
 - Benchmarks
-- Roadmap d'optimisation
+- Feuille de route d'optimisation
 - ROI potentiel""",
         
         "user_template": """Rapport de performance :
 
 {performance_data}
 
-Génère un rapport qui inclut :
+Générez un rapport qui inclut :
 1. Score de performance (1-10)
 2. Points forts
 3. Points à améliorer
@@ -103,7 +103,7 @@ class PromptManager:
         try:
             return template.format(**kwargs)
         except KeyError as e:
-            return f"Template error: Missing variable {e}. Template: {template}"
+            return f"Erreur de template: Variable manquante {e}. Template: {template}"
     
     def get_available_templates(self) -> list:
         """Retourne la liste des templates disponibles"""
@@ -120,19 +120,19 @@ class PromptManager:
 
 def test_prompt_templates():
     """Test des templates de prompts"""
-    print("🧪 Test Prompt Templates - Jour 11")
-    print("="*50)
+    print("Test Prompt Templates")
+    print("=" * 50)
     
     try:
         manager = PromptManager()
         
-        print(f"✅ Gestionnaire initialisé")
-        print(f"   Template actif : {manager.template_set}")
-        print(f"   Templates disponibles : {manager.get_available_templates()}")
+        print(f"Gestionnaire initialisé")
+        print(f"Template actif : {manager.template_set}")
+        print(f"Templates disponibles : {manager.get_available_templates()}")
         
         # Test système
         system_prompt = manager.get_system_prompt()
-        print(f"\n📋 PROMPT SYSTÈME (extrait) :")
+        print(f"\nPROMPT SYSTÈME (extrait) :")
         print("-" * 40)
         print(system_prompt[:200] + "...")
         print("-" * 40)
@@ -141,25 +141,27 @@ def test_prompt_templates():
         test_metrics = "CPU: 65%, RAM: 72%, Disk: 45%"
         user_prompt = manager.format_user_prompt(metrics=test_metrics)
         
-        print(f"\n📝 PROMPT UTILISATEUR formaté :")
+        print(f"\nPROMPT UTILISATEUR formaté :")
         print("-" * 40)
         print(user_prompt)
         print("-" * 40)
         
         # Test changement de template
-        print(f"\n🔄 Test changement de template...")
+        print(f"\nTest changement de template...")
         if manager.switch_template("help_desk"):
-            print(f"   Template changé vers : {manager.template_set}")
+            print(f"Template changé vers : {manager.template_set}")
             
             problem = "L'ordinateur est lent"
             help_prompt = manager.format_user_prompt(problem=problem)
-            print(f"\n   Prompt help desk :")
-            print(f"   {help_prompt[:100]}...")
+            print(f"\nPrompt help desk :")
+            print(f"{help_prompt[:100]}...")
         else:
-            print("   Échec du changement de template")
+            print("Échec du changement de template")
+        
+        print("\nTest terminé avec succès")
         
     except Exception as e:
-        print(f"❌ Erreur : {e}")
+        print(f"ERREUR : {e}")
 
 
 if __name__ == "__main__":

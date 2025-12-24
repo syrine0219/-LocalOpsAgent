@@ -1,4 +1,4 @@
-# docker_ops/container_monitor.py - VERSION CORRECTE
+
 import time
 from threading import Thread
 from .anomaly import AnomalyDetector
@@ -16,7 +16,7 @@ class ContainerMonitor:
     def start_monitoring(self):
         """Démarre le monitoring en arrière-plan"""
         if self.monitoring:
-            return "⚠️ Monitoring already running"
+            return " Monitoring already running"
         
         self.monitoring = True
         self.thread = Thread(target=self._monitor_loop, daemon=True)
@@ -26,7 +26,7 @@ class ContainerMonitor:
     def stop_monitoring(self):
         """Arrête le monitoring"""
         if not self.monitoring:
-            return "⚠️ Monitoring not running"
+            return " Monitoring not running"
         
         self.monitoring = False
         if self.thread:
@@ -60,7 +60,7 @@ class ContainerMonitor:
                     
                     for anomaly in metric_anomalies:
                         alert = self.anomaly_detector.generate_alert(anomaly, container.name)
-                        print(f"📢 {alert['notification']}")
+                        print(f" {alert['notification']}")
                     
                     # Récupérer l'état du conteneur
                     inspection = container.attrs
@@ -75,7 +75,7 @@ class ContainerMonitor:
                     
                     for anomaly in state_anomalies:
                         alert = self.anomaly_detector.generate_alert(anomaly, container.name)
-                        print(f"📢 {alert['notification']}")
+                        print(f" {alert['notification']}")
                         
                 except Exception as e:
                     print(f"Error checking container {container.name}: {e}")

@@ -1,13 +1,13 @@
 """
 Résumé intelligent des métriques système via AI
-Jour 10 - Semaine 2
+
 """
 
 import json
 from typing import Dict, Any
 import logging
 
-# Import absolu au lieu de relatif
+
 try:
     from models.llm import LocalLLM
 except ImportError:
