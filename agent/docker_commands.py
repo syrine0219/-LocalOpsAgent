@@ -1,12 +1,16 @@
-# agent/docker_commands.py
+# agent/docker_commands.py - VERSION COMPLÈTE AVEC JOUR 18
 from docker_ops.docker_client import DockerManager
 from docker_ops.metrics import ContainerMetrics
 from docker_ops.anomaly import AnomalyDetector
+from docker_ops.container_monitor import ContainerMonitor
 import json
+import time
+from typing import Dict, List, Optional
 
 class DockerAgentCommands:
     def __init__(self):
         self.docker_manager = DockerManager()
+        self._monitor = None  # Pour le monitoring en arrière-plan
         # Pour l'instant, pas de LLM - nous l'ajouterons plus tard
         # self.llm_client = None
     
@@ -34,6 +38,34 @@ class DockerAgentCommands:
                 return self._show_metrics()
         elif "docker info" in command:
             return self._show_docker_info()
+        elif "check anomalies" in command or "detect anomalies" in command:
+            return self._check_anomalies()
+        elif "show alerts" in command or "alerts" in command:
+            return self._show_alerts()
+        elif "clear alerts" in command:
+            return self._clear_alerts()
+        elif "start monitoring" in command:
+            return self._start_monitoring()
+        elif "stop monitoring" in command:
+            return self._stop_monitoring()
+        elif "export alerts" in command:
+            # Extraire le nom du fichier
+            parts = command.split("export alerts")
+            if len(parts) > 1 and parts[1].strip():
+                filename = parts[1].strip()
+                return self._export_alerts(filename)
+            else:
+                return self._export_alerts()
+        elif "load alerts" in command:
+            parts = command.split("load alerts")
+            if len(parts) > 1 and parts[1].strip():
+                filename = parts[1].strip()
+                return self._load_alerts(filename)
+            else:
+                return "❌ Please specify filename: load alerts <filename>"
+        elif "set threshold" in command:
+            # Exemple: set threshold cpu_warning 80
+            return self._set_threshold(command)
         else:
             return self._help_message()
     
@@ -266,6 +298,159 @@ class DockerAgentCommands:
         
         return response
     
+    def _check_anomalies(self) -> str:
+        """Vérifie les anomalies sur tous les conteneurs"""
+        monitor = ContainerMonitor(self.docker_manager.client, check_interval=5)
+        
+        # Exécuter une vérification ponctuelle
+        response = "🔍 **Anomaly Detection Scan:**\n\n"
+        
+        containers = self.docker_manager.list_containers()
+        if not containers:
+            return "❌ No containers to check"
+        
+        detector = monitor.anomaly_detector
+        metrics_collector = ContainerMetrics(self.docker_manager.client)
+        
+        anomalies_found = 0
+        
+        for container in containers:
+            # Vérifier les métriques
+            metrics = metrics_collector.get_container_stats(container['id'])
+            if metrics:
+                metric_anomalies = detector.analyze_metrics(metrics)
+                for anomaly in metric_anomalies:
+                    detector.generate_alert(anomaly, container['name'])
+                    anomalies_found += 1
+            
+            # Vérifier l'état
+            inspection = self.docker_manager.inspect_container(container['id'])
+            state_anomalies = detector.analyze_container_state({
+                'status': container['status'],
+                'restart_count': inspection.get('state', {}).get('RestartCount', 0),
+                'oom_killed': inspection.get('state', {}).get('OOMKilled', False)
+            })
+            for anomaly in state_anomalies:
+                detector.generate_alert(anomaly, container['name'])
+                anomalies_found += 1
+        
+        # Récupérer les statistiques
+        stats = detector.get_stats()
+        
+        response += f"📊 **Scan Results:**\n"
+        response += f"  Containers checked: {len(containers)}\n"
+        response += f"  Anomalies found: {anomalies_found}\n"
+        response += f"  Critical alerts: {stats['critical']}\n"
+        response += f"  Warning alerts: {stats['warning']}\n\n"
+        
+        # Afficher les alertes
+        alerts = detector.get_active_alerts()
+        if alerts:
+            response += "🚨 **Active Alerts:**\n\n"
+            for i, alert in enumerate(alerts[-5:]):  # Dernières 5 alertes
+                icon = "🚨" if alert['urgency'] == 'HIGH' else "⚠️"
+                response += f"{icon} **{alert['container']}** ({alert['timestamp']})\n"
+                response += f"   {alert['anomaly']['message']}\n\n"
+        else:
+            response += "✅ No anomalies detected\n"
+        
+        return response
+    
+    def _show_alerts(self) -> str:
+        """Affiche les alertes actives"""
+        monitor = ContainerMonitor(self.docker_manager.client)
+        alerts = monitor.anomaly_detector.get_active_alerts()
+        
+        if not alerts:
+            return "✅ No active alerts"
+        
+        response = "🚨 **Active Alerts:**\n\n"
+        
+        for i, alert in enumerate(alerts):
+            status = "🔴 UNACKNOWLEDGED" if not alert['acknowledged'] else "🟡 ACKNOWLEDGED"
+            icon = "🚨" if alert['urgency'] == 'HIGH' else "⚠️"
+            
+            response += f"{i+1}. {icon} **{alert['container']}** {status}\n"
+            response += f"   Time: {alert['timestamp']}\n"
+            response += f"   Issue: {alert['anomaly']['message']}\n"
+            response += f"   Type: {alert['anomaly']['type']} ({alert['anomaly']['level']})\n\n"
+        
+        stats = monitor.anomaly_detector.get_stats()
+        response += f"📊 **Stats:** {stats['unacknowledged']} unacknowledged, {stats['acknowledged']} acknowledged\n"
+        
+        return response
+    
+    def _clear_alerts(self) -> str:
+        """Efface toutes les alertes"""
+        monitor = ContainerMonitor(self.docker_manager.client)
+        monitor.anomaly_detector.clear_alerts()
+        
+        return "✅ All alerts cleared"
+    
+    def _start_monitoring(self) -> str:
+        """Démarre le monitoring en arrière-plan"""
+        if not hasattr(self, '_monitor') or self._monitor is None:
+            self._monitor = ContainerMonitor(self.docker_manager.client, check_interval=10)
+        
+        return self._monitor.start_monitoring()
+    
+    def _stop_monitoring(self) -> str:
+        """Arrête le monitoring"""
+        if hasattr(self, '_monitor') and self._monitor is not None:
+            return self._monitor.stop_monitoring()
+        return "⚠️ Monitoring not running"
+    
+    def _export_alerts(self, filename: str = "alerts.json") -> str:
+        """Exporte les alertes dans un fichier JSON"""
+        try:
+            monitor = ContainerMonitor(self.docker_manager.client)
+            success = monitor.anomaly_detector.export_alerts(filename)
+            if success:
+                return f"✅ Alerts exported to {filename}"
+            else:
+                return f"❌ Failed to export alerts to {filename}"
+        except Exception as e:
+            return f"❌ Error exporting alerts: {str(e)}"
+    
+    def _load_alerts(self, filename: str) -> str:
+        """Charge les alertes depuis un fichier JSON"""
+        try:
+            monitor = ContainerMonitor(self.docker_manager.client)
+            success = monitor.anomaly_detector.load_alerts(filename)
+            if success:
+                stats = monitor.anomaly_detector.get_stats()
+                return f"✅ Alerts loaded from {filename}\n📊 Loaded: {stats['total']} alerts ({stats['critical']} critical, {stats['warning']} warning)"
+            else:
+                return f"❌ Failed to load alerts from {filename}"
+        except Exception as e:
+            return f"❌ Error loading alerts: {str(e)}"
+    
+    def _set_threshold(self, command: str) -> str:
+        """Définit un seuil pour la détection d'anomalies"""
+        try:
+            parts = command.split()
+            if len(parts) < 4:
+                return "❌ Usage: set threshold <type> <value>\n   Example: set threshold cpu_warning 80"
+            
+            threshold_type = parts[2]
+            value = float(parts[3])
+            
+            monitor = ContainerMonitor(self.docker_manager.client)
+            
+            # Vérifier si le type de seuil existe
+            if threshold_type not in monitor.anomaly_detector.thresholds:
+                available = ", ".join(monitor.anomaly_detector.thresholds.keys())
+                return f"❌ Invalid threshold type. Available: {available}"
+            
+            # Mettre à jour le seuil
+            monitor.anomaly_detector.thresholds[threshold_type] = value
+            
+            return f"✅ Threshold {threshold_type} set to {value}"
+        except ValueError:
+            return "❌ Invalid value. Please provide a number."
+        except Exception as e:
+            return f"❌ Error setting threshold: {str(e)}"
+    
     def _help_message(self) -> str:
         """Message d'aide pour les commandes Docker"""
         return """🤖 **Docker Commands Help:**
@@ -277,10 +462,28 @@ Available commands:
 4. `metrics` - Show metrics for all containers
 5. `metrics for <name>` - Show metrics for specific container
 6. `docker info` - Show Docker system information
+7. `check anomalies` - Run anomaly detection scan
+8. `show alerts` - Display active alerts
+9. `clear alerts` - Clear all alerts
+10. `start monitoring` - Start background monitoring
+11. `stop monitoring` - Stop background monitoring
+12. `export alerts [filename]` - Export alerts to JSON file
+13. `load alerts <filename>` - Load alerts from JSON file
+14. `set threshold <type> <value>` - Set anomaly threshold
 
 Examples:
 - "show containers"
 - "inspect web"
 - "metrics for cache"
 - "check container health"
+- "check anomalies"
+- "set threshold cpu_warning 80"
+
+Anomaly Detection Thresholds:
+- cpu_warning (default: 70.0)
+- cpu_critical (default: 90.0) 
+- memory_warning (default: 75.0)
+- memory_critical (default: 90.0)
+- restart_warning (default: 3)
+- restart_critical (default: 10)
 """
